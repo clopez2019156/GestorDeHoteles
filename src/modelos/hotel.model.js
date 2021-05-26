@@ -9,16 +9,13 @@ var HotelSchema = Schema({
     administrador: { type: Schema.Types.ObjectId, ref: 'usuarios' },
     habitaciones: [{
         nombreHabitacion: String,
-        precio: String,
+        precio: Number,
         disponibilidad: String
     }],
     eventos: [{
         tipoEvento: String,
-        fecha: Date,
+        fecha: String,
         hora: String
-    }],
-    servicios: [{
-        nombre: String
     }]
 
 });

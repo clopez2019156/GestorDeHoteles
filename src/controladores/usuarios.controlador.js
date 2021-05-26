@@ -36,7 +36,7 @@ function adminApp(req, res) {
 
 
 //funciones del administrador de la app
-function crearAmdinHotel(req, res) {
+function crearAdminHotel(req, res) {
     var params = req.body;
     var usuarioModel = Usuario();
     usuarioModel.username = params.username;
@@ -53,12 +53,10 @@ function crearAmdinHotel(req, res) {
                 bcrypt.hash(usuarioModel.password, null, null, (err, passwordEncriptada) => {
                     usuarioModel.password = passwordEncriptada;
                     usuarioModel.save((err, usuarioguardado) => {
-                        if (err) res.status(500).send({ mensaje: "Error en la peticion" });
-                        if (usuarioguardado) {
-                            res.status(400).send({ usuarioguardado });
-                        } else {
-                            res.status(404).send({ mensaje: "El administrador de hotel no se pudo crear" });
-                        }
+                        if (err) return res.status(500).send({ mensaje: "Error en la peticion" });
+                        if (!usuarioguardado) return res.status(400).send({ mensaje: "El administrador de hotel no se pudo crear" });
+                        return res.status(200).send({ usuarioguardado });
+
                     });
                 });
             }
@@ -73,11 +71,24 @@ function verUsuarios(req, res) {
     if (req.user.rol === "ROL_ADMIN") {
         Usuario.find((err, usuarios) => {
             if (err) return res.status(404).send({ mensaje: "error en la peticion" });
-            return res.status(500).send({ usuarios });
+            return res.status(200).send({ usuarios });
         });
     } else {
-        res.status(401).send({ mensaje: "No tiene permisos para ver usuarios" });
+        res.status(500).send({ mensaje: "No tiene permisos para ver usuarios" });
     }
+}
+
+
+function verAdminsHotel(req, res) {
+
+    //if (req.user.rol === "ROL_ADMIN") {
+    Usuario.find({ rol: "ROL_HOTEL" }, (err, usuarios) => {
+        if (err) return res.status(404).send({ mensaje: "error en la peticion" });
+        return res.status(200).send({ usuarios });
+    });
+    //} else {
+    //    res.status(401).send({ mensaje: "No tiene permisos para ver usuarios" });
+    // }
 }
 
 function login(req, res) {
@@ -113,22 +124,28 @@ function buscarUsuarioHospedado(req, res) {
     var params = req.body;
 
     if (req.user.rol === "ROL_HOTEL") {
-        Usuario.findById({ _id: req.user.sub }, (err, adminHotelEncontrado) => {
+
+        Hotel.findOne({ administrador: req.user.sub }, (err, hotelEncontrado) => {
             if (err) res.status(200).send({ mensaje: 'Error en la petición' });
-            if (!adminHotelEncontrado) return res.status(200).send({ mensaje: 'Administrador de hotel no encontrado' });
+            if (!hotelEncontrado) return res.status(200).send({ mensaje: 'hotel no encontrado' });
 
-            Reservacion.findOne({ hotel: adminHotelEncontrado._id }, (err, reservacionEncontrada) => {
+            Usuario.findOne({ username: params.username }, (err, usuarioEncontrado) => {
                 if (err) res.status(200).send({ mensaje: 'Error en la petición' });
-                if (!reservacionEncontrada) return res.status(200).send({ mensaje: 'reservacion no encontrada' });
+                if (!usuarioEncontrado) {
+                    res.status(200).send({ mensaje: 'usuario no hospedado' });
+                } else {
 
-                Usuario.findByid(reservacionEncontrada.usuario, (err, usuarioEncontrado) => {
-                    if (err) res.status(200).send({ mensaje: 'Error en la petición' });
-                    if (!usuarioEncontrado) res.status(200).send({ mensaje: 'usuario no hospedado' });
+                    Reservacion.find({ hotel: hotelEncontrado._id, usuario: usuarioEncontrado._id }, (err, reservacionEncontrada) => {
+                        if (err) res.status(200).send({ mensaje: 'Error en la petición' });
+                        if (!reservacionEncontrada) res.status(200).send({ mensaje: 'usuario no hospedado' });
 
-                    return res.status(200).send({ usuarioEncontrado });
-                });
+
+                        return res.status(200).send({ usuarioEncontrado });
+                    });
+                }
             });
         });
+
     }
 
 }
@@ -175,47 +192,32 @@ function verCuenta(req, res) {
     })
 }
 
-function hacerReservacion(req, res) {
-    var params = req.body;
-    var reservacionModel = Reservacion();
+function obtenerUsuarios(req, res) {
+    // Usuario.find().exec((err, usuariosEncontrados)=>{})
+    Usuario.find((err, usuariosEncontrados) => {
+        if (err) return res.status(500).send({ mensaje: 'Error en la peticion de Obtener Usuarios' })
+        if (!usuariosEncontrados) return res.status(500).send({ mensaje: 'Error en la consulta de Usuarios' })
+            // usuariosEncontrados === [datos] ||  !usuariosEncontrados === [] <-- no trae nada
+        return res.status(200).send({ usuariosEncontrados })
+            // {
+            //     usuariosEncontrados: ["array de lo que contenga esta variable"]
+            // }
 
-    if (req.user.rol === "ROL_USER") {
-        reservacionModel.usuario = req.user.sub;
-        reservacionModel.hotel = params.hotel;
-        reservacionModel.fechaEntrada = Date.parse(params.year + "," + params.mes + "," + params.dia);
-        reservacionModel.fechaSalida = Date.parse(params.year + "," + params.mes + "," + params.dia);
-        reservacionModel.habitacion = params.habitacion;
-
-        Hotel.findOne({ _id: reservacionModel.hotel, "habitaciones.nombreHabitacion": params.habitacion }, { "habitaciones.$": 1, nombreHabitacion: 1, precio: 1, disponibilidad: 1 }, (err, habitacionEncontrada) => {
-            if (err) return res.status(500).send({ mensaje: 'Error en la peticion' });
-            if (!habitacionEncontrada) return res.status(500).send({ mensaje: 'No existe la habitación' });
-
-            if (habitacionEncontrada.habitaciones[0].disponibilidad === 'disponible') {
-
-                reservacionModel.save((err, reservacionHecha) => {
-                    if (err) res.status(500).send({ mensaje: 'error en la peticion' });
-                    if (!reservacionHecha) res.status(500).send({ mensaje: 'error al hacer reservacion' });
-
-                    Hotel.updateOne({ "habitaciones.nombreHabitacion": params.habitacion }, {
-                        $set: {
-                            "habitaciones.$.disponibilidad": 'No disponible'
-                        }
-                    }, (err, habitacionModificada) => {
-                        if (err) return res.status(500).send({ mensaje: 'Error en la peticion' });
-                        if (!habitacionModificada) return res.status(500).send({ mensaje: 'No se ha agregado la habitacion' });
-
-                    });
-                    return res.status(200).send({ reservacionHecha });
-                });
-            } else {
-                return res.status(500).send({ mensaje: 'Esta habitación ya está reservada' })
-            }
-
-        });
-
-    }
-
+    })
 }
+
+function obtenerUsuarioID(req, res) {
+    var idUsuario = req.params.idUsuario
+        // User.find({ _id: idUsuario }, (err, usuarioEncontrado)=>{})  <---- Me retorna un Array = [] || usuarioEncontrado[0].nombre
+        // User.findOne({ _id: idUsuario }, (err, usuarioEncontrado)=>{})  <--- Me retorna un objeto = {} || usuarioEncontrado.nombre
+    Usuario.findById(idUsuario, (err, usuarioEncontrado) => {
+        if (err) return res.status(500).send({ mensaje: 'Error en la peticion del Usuario' })
+        if (!usuarioEncontrado) return res.status(500).send({ mensaje: 'Error en obtener los datos del Usuario' })
+        console.log(usuarioEncontrado.email);
+        return res.status(200).send({ usuarioEncontrado })
+    })
+}
+
 
 function cancelarReservacion(req, res) {
     var params = req.body;
@@ -239,7 +241,8 @@ function cancelarReservacion(req, res) {
 }
 
 function eliminarCuenta(req, res) {
-    Usuario.findOneAndDelete({ _id: req.user.sub }, (err, usuarioEliminado) => {
+    var params = req.body;
+    Usuario.findOneAndDelete({ _id: params._id }, (err, usuarioEliminado) => {
         if (err) return res.status(500).send({ mensaje: "error en la peticion" });
         if (!usuarioEliminado) return res.status(500).send({ mensaje: "no se pudo eliminar el usuario" });
 
@@ -249,12 +252,15 @@ function eliminarCuenta(req, res) {
 
 function editarCuenta(req, res) {
     var params = req.body;
+    var id = params._id;
+    delete params._id;
     delete params.rol;
-    Usuario.findOneAndUpdate({ _id: req.user.sub }, params, { new: true }, (err, usuarioEditado) => {
+    delete params.password;
+    Usuario.findOneAndUpdate({ _id: id }, params, { new: true }, (err, usuarioEditado) => {
         if (err) return res.status(500).send({ mensaje: 'Error de peticion' })
         if (!usuarioEditado) return res.status(500).send({ mensaje: 'No se ha podido editar al Usuario' })
 
-        return res.status(200).send({ usuarioEditado })
+        return res.status(200).send({ usuarioEditado });
     })
 
 }
@@ -293,29 +299,27 @@ function mostrarHoteles(req, res) {
         if (err) return res.status(500).send({ mensaje: 'error en la peticion' });
         if (!hotelEncontrado) return res.status(500).send({ mensaje: 'No hay hoteles' });
 
-        return res.status(200).send(hotelEncontrado);
+        return res.status(200).send({ hotelEncontrado });
     })
 }
 
 function buscarHotel(req, res) {
     var params = req.body;
-    if (params.nombre) {
-        hotelModel.findOne({ nombre: params.nombre }, (err, hotelEncontrado) => {
-            if (err) return res.status(500).send({ mensaje: 'error en la peticion' });
-            if (!hotelEncontrado) return res.status(500).send({ mensaje: 'este hotel no existe' });
+    hotelModel.findOne({ nombre: params.nombre }, (err, hotelEncontrado) => {
+        if (err) return res.status(500).send({ mensaje: 'error en la peticion' });
+        if (!hotelEncontrado) {
+            hotelModel.findOne({ direccion: params.nombre }, (err, hotelEncontrado) => {
+                if (err) return res.status(500).send({ mensaje: 'error en la peticion' });
+                if (!hotelEncontrado) return res.status(500).send({ mensaje: 'este hotel no existe' });
 
-            return res.status(200).send(hotelEncontrado);
-        })
-    } else if (params.direccion) {
-        hotelModel.findOne({ direccion: params.direccion }, (err, hotelEncontrado) => {
-            if (err) return res.status(500).send({ mensaje: 'error en la peticion' });
-            if (!hotelEncontrado) return res.status(500).send({ mensaje: 'este hotel no existe' });
+                return res.status(200).send({ hotelEncontrado });
+            })
 
-            return res.status(200).send(hotelEncontrado);
-        })
-    } else {
-        return res.status(500).send({ mensaje: 'necesita nombre o direccion del hotel para buscar' });
-    }
+        } else {
+            return res.status(200).send({ hotelEncontrado });
+        }
+    });
+
 }
 
 
@@ -335,7 +339,7 @@ function crearUsuario(req, res) {
                     usuarioModel.save((err, usuarioGuardado) => {
                         if (err) res.status(500).send({ mensaje: "Error en la peticion" });
                         if (usuarioGuardado) {
-                            return res.status(400).send({ usuarioGuardado });
+                            return res.status(200).send({ usuarioGuardado });
                         } else {
                             return res.status(404).send({ mensaje: "El usuario no se pudo crear" });
                         }
@@ -350,16 +354,54 @@ function crearUsuario(req, res) {
     }
 }
 
+function editarUsuario(req, res) {
+    var idUsuario = req.params.idUsuario;
+    var params = req.body;
+
+    // BORRAR LA PROPIEDAD DE PASSWORD PARA QUE NO SE PUEDA EDITAR
+    delete params.password;
+    delete params.rol;
+
+    // req.user.sub <--- id Usuario logeado
+    if (idUsuario != req.user.sub) {
+        return res.status(500).send({ mensaje: 'No posees los permisos necesarios para actulizar este Usuario.' });
+    }
+
+    Usuario.findByIdAndUpdate(idUsuario, params, { new: true }, (err, usuarioActualizado) => {
+        if (err) return res.status(500).send({ mensaje: 'Error en la peticion' });
+        if (!usuarioActualizado) return res.status(500).send({ mensaje: 'No se ha podido actualizar al Usuario' });
+        // usuarioActualizado.password = undefined;
+        return res.status(200).send({ usuarioActualizado });
+    })
+
+
+}
+
+function eliminarUsuario(req, res) {
+    const idUsuario = req.params.idUsuario;
+
+    if (idUsuario != req.user.sub) {
+        return res.status(500).send({ mensaje: 'No posee los permisos para eliminar a este Usuario.' })
+    }
+
+    Usuario.findByIdAndDelete(idUsuario, (err, usuarioEliminado) => {
+        if (err) return res.status(500).send({ mensaje: 'Error en la peticion de Eliminar' });
+        if (!usuarioEliminado) return res.status(500).send({ mensaje: 'Error al eliminar el usuario.' });
+
+        return res.status(200).send({ usuarioEliminado });
+    })
+}
+
 
 module.exports = {
     adminApp,
     login,
-    crearAmdinHotel,
+    crearAdminHotel,
     verUsuarios,
+    verAdminsHotel,
     mostrarHoteles,
     buscarHotel,
     buscarUsuarioHospedado,
-    hacerReservacion,
     crearUsuario,
     agregarEvento,
     eliminarCuenta,
@@ -367,5 +409,9 @@ module.exports = {
     verHabitaciones,
     cancelarReservacion,
     verEventos,
-    verCuenta
+    verCuenta,
+    obtenerUsuarios,
+    obtenerUsuarioID,
+    editarUsuario,
+    eliminarUsuario
 }

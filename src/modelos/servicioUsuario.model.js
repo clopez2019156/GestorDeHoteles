@@ -5,7 +5,8 @@ var Schema = mongoose.Schema;
 
 
 var ServicioUsuarioSchema = Schema({
-    servicio: { type: Schema.Types.ObjectId, ref: 'servicios' },
-    usuario: { type: Schema.Types.ObjectId, ref: 'usuarios' }
+    usuario: { type: Schema.Types.ObjectId, ref: 'usuarios' },
+    servicio: { type: Schema.Types.ObjectId, ref: 'servicios' }
+
 });
 module.exports = mongoose.model('servicios pedidos', ServicioUsuarioSchema);
