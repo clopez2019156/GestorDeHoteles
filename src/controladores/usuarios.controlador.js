@@ -220,9 +220,9 @@ function obtenerUsuarioID(req, res) {
 
 
 function cancelarReservacion(req, res) {
-    var params = req.body;
+    var idUsuario = req.params.id;
 
-    Reservacion.findOneAndDelete({ _id: params.reservacion }, (err, reservacionCancelada) => {
+    Reservacion.findOneAndDelete({ _id: idUsuario }, (err, reservacionCancelada) => {
         if (err) return res.status(500).send({ mensaje: 'error en la peticion' });
         if (!reservacionCancelada) return res.status(500).send({ mensaje: 'error al cancelar la reservación' });
 

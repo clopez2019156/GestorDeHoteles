@@ -179,6 +179,32 @@ function hacerReservacion(req, res) {
 
 }
 
+function verReservaciones(req, res) {
+    if (req.user.rol === "ROL_USER") {
+        Reservacion.find({ usuario: req.user.sub }, (err, reservacionesEcontradas) => {
+            if (err) return res.status(500).send({ mensaje: 'Error en la peticion' });
+            if (!reservacionesEcontradas) return res.status(500).send({ mensaje: 'NO ha hecho reservaciones' });
+
+            return res.status(200).send({ reservacionesEcontradas });
+
+        });
+    } else if (req.user.rol === "ROL_HOTEL") {
+        Hotel.findOne({ administrador: req.user.sub }, (err, hotelEncontrado) => {
+            if (err) return res.status(500).send({ mensaje: 'Error en la peticion' });
+            if (!hotelEncontrado) return res.status(500).send({ mensaje: 'No es admin del hotel' });
+
+            Reservacion.find({ hotel: hotelEncontrado._id }, (err, reservacionesEcontradas) => {
+                if (err) return res.status(500).send({ mensaje: 'Error en la peticion' });
+                if (!reservacionesEcontradas) return res.status(500).send({ mensaje: 'NO ha hecho reservaciones' });
+
+                return res.status(200).send({ reservacionesEcontradas });
+            });
+        });
+    } else {
+        return res.status(500).send({ mensaje: 'Tiene que iniciar sesion' });
+    }
+}
+
 
 
 
@@ -188,5 +214,6 @@ module.exports = {
     agregarHabitacionesHotel,
     editarHotel,
     eliminarHotel,
-    hacerReservacion
+    hacerReservacion,
+    verReservaciones
 }

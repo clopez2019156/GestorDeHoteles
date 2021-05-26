@@ -5,12 +5,11 @@ var Hotel = require("../modelos/hotel.model");
 var Reservacion = require("../modelos/reservacion.model");
 var Factura = require("../modelos/factura.model")
 var Servicios = require("../modelos/servicio.model");
+var moment = require('moment');
 
 function facturar(req, res) {
-
     var total = 0;
     var diasHospedado = 0;
-
     var params = req.body;
     var facturaModel = new Factura();
     Reservacion.findById(params.id, (err, reservacionEncontrada) => {
@@ -28,16 +27,19 @@ function facturar(req, res) {
                 console.log(serviciosEncontrados.precio)
                 for (var i = 0; i < serviciosEncontrados.length; i++) {
                     total = total + serviciosEncontrados[i].precio;
-                    console.log(serviciosEncontrados[i].precio)
                 }
                 var fecha1 = moment(reservacionEncontrada.fechaEntrada);
                 var fecha2 = moment(reservacionEncontrada.fechaSalida);
-                console.log(fecha2.diff(fecha1, 'days'), ' dias de diferencia');
-                console.log(habitacionEncontrada.habitaciones[0].precio)
-                diasHospedado = 2;
-                console.log(diasHospedado)
-                facturaModel.total = habitacionEncontrada.habitaciones[0].precio + total;
-                return res.status(200).send({ facturaModel });
+                diasHospedado = fecha2.diff(fecha1, 'days');
+
+                facturaModel.total = diasHospedado * (habitacionEncontrada.habitaciones[0].precio) + total;
+                facturaModel.save((err, facturaGuardada) => {
+                    if (err) return res.status(500).send({ mensaje: 'Error en la peticion' });
+                    if (!facturaGuardada) return res.status(500).send({ mensaje: 'No se pudo facturar' });
+
+                    return res.status(200).send({ facturaGuardada });
+                });
+
             });
 
         });

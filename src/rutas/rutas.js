@@ -24,6 +24,7 @@ api.post("/crearHotel", md_autorizacion.ensureAuth, HotelControlador.crearHotel)
 api.put("/agregarHabitacionesHotel", md_autorizacion.ensureAuth, HotelControlador.agregarHabitacionesHotel);
 api.put("/editarHotel", md_autorizacion.ensureAuth, HotelControlador.editarHotel);
 api.post("/eliminarHotel", md_autorizacion.ensureAuth, HotelControlador.eliminarHotel);
+api.get("/verReservaciones", md_autorizacion.ensureAuth, HotelControlador.verReservaciones);
 
 
 //rutas generales
@@ -43,7 +44,7 @@ api.delete("/eliminarCuenta", md_autorizacion.ensureAuth, UsuarioControlador.eli
 api.put("/editarCuenta", md_autorizacion.ensureAuth, UsuarioControlador.editarCuenta);
 api.get("/verHabitaciones", UsuarioControlador.verHabitaciones);
 api.get("/verEventos", UsuarioControlador.verEventos);
-api.delete("/cancelarReservacion", UsuarioControlador.cancelarReservacion);
+api.delete("/cancelarReservacion/:id", md_autorizacion.ensureAuth, UsuarioControlador.cancelarReservacion);
 api.get("/verCuenta", md_autorizacion.ensureAuth, UsuarioControlador.verCuenta);
 
 
