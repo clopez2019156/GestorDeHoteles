@@ -35,7 +35,9 @@ api.post("/mostrarHoteles", UsuarioControlador.mostrarHoteles);
 //rutas adminHotel
 api.put("/agregarEvento", md_autorizacion.ensureAuth, UsuarioControlador.agregarEvento);
 api.post("/buscarUsuarioHospedado", md_autorizacion.ensureAuth, UsuarioControlador.buscarUsuarioHospedado);
+
 //probar funcion de arriba
+api.get("/buscarHotelId/:id", HotelControlador.buscarHotelId);
 
 //rutas usuario normal
 api.post("/hacerReservacion", md_autorizacion.ensureAuth, HotelControlador.hacerReservacion);
@@ -54,6 +56,7 @@ api.post("/login", UsuarioControlador.login);
 //rutas servicio
 api.post("/agregarServicio", md_autorizacion.ensureAuth, ServicioControlador.agregarServicio);
 api.post("/verServicios", ServicioControlador.verServicios);
+api.post("/verServiciosUsuario", ServicioControlador.verServiciosUsuario);
 
 
 //facturas

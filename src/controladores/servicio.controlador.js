@@ -50,9 +50,21 @@ function verServicios(req, res) {
 
 }
 
+function verServiciosUsuario(req, res) {
+    var params = req.body;
+
+    Servicio.find({ usuario: params.usuario, hotel: params.hotel }, (err, serviciosEncontrados) => {
+        if (err) return res.status(500).send({ mensaje: 'error en la peticion' });
+
+        return res.status(200).send({ serviciosEncontrados });
+    })
+
+}
+
 
 
 module.exports = {
     agregarServicio,
-    verServicios
+    verServicios,
+    verServiciosUsuario
 }

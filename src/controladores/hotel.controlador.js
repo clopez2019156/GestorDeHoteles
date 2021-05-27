@@ -148,7 +148,7 @@ function hacerReservacion(req, res) {
     reservacionModel.fechaSalida = params.fechaSalida;
     reservacionModel.habitacion = params.habitacion;
 
-    Hotel.findOne({ _id: reservacionModel.hotel, "habitaciones.nombreHabitacion": params.habitacion }, { "habitaciones.$": 1, nombreHabitacion: 1, precio: 1, disponibilidad: 1 }, (err, habitacionEncontrada) => {
+    Hotel.findOne({ _id: params.hotel, "habitaciones.nombreHabitacion": params.habitacion }, { "habitaciones.$": 1, nombreHabitacion: 1, precio: 1, disponibilidad: 1 }, (err, habitacionEncontrada) => {
         if (err) return res.status(500).send({ mensaje: 'Error en la peticion' });
         if (!habitacionEncontrada) return res.status(500).send({ mensaje: 'No existe la habitación' });
 
@@ -205,6 +205,16 @@ function verReservaciones(req, res) {
     }
 }
 
+function buscarHotelId(req, res) {
+    var idUsuario = req.params.id;
+    Hotel.findById(idUsuario, (err, hotelEncontrado) => {
+        if (err) return res.status(500).send({ mensaje: 'Error en la peticion' });
+        if (!hotelEncontrado) return res.status(500).send({ mensaje: 'no se encuentra el hotel' });
+
+        return res.status(200).send({ hotelEncontrado });
+    })
+
+}
 
 
 
@@ -215,5 +225,6 @@ module.exports = {
     editarHotel,
     eliminarHotel,
     hacerReservacion,
-    verReservaciones
+    verReservaciones,
+    buscarHotelId
 }
